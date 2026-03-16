@@ -115,7 +115,19 @@ export default function Home() {
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data: { error?: string; detail?: string; results?: unknown[] } = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        // Server returned non-JSON (e.g. "Request Entity Too Large")
+        const message =
+          res.status === 413 || text.toLowerCase().includes("entity too large")
+            ? "Files too large. Try fewer or smaller images."
+            : res.statusText || "Something went wrong";
+        setError(message);
+        return;
+      }
       if (!res.ok) {
         setError(data.error || data.detail || "Something went wrong");
         return;

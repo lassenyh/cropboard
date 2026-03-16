@@ -9,6 +9,7 @@ export default function Home() {
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<{ file: File; url: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [analyzeProgress, setAnalyzeProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isDraggingAddMore, setIsDraggingAddMore] = useState(false);
@@ -107,6 +108,7 @@ export default function Home() {
     if (files.length === 0) return;
     setLoading(true);
     setError(null);
+    setAnalyzeProgress(0);
     const MAX_BATCH_BYTES = 4 * 1024 * 1024; // 4 MB (Vercel limit 4.5 MB)
     const batches: File[][] = [];
     let currentBatch: File[] = [];
@@ -127,7 +129,8 @@ export default function Home() {
 
     const allResults: { filename: string; dataUrl: string; mimeType: string; cropWidth: number; cropHeight: number; originalWidth: number; originalHeight: number }[] = [];
     try {
-      for (const batch of batches) {
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
         const formData = new FormData();
         batch.forEach((f) => formData.append("files", f));
         const res = await fetch("/api/process-storyboards", {
@@ -156,6 +159,7 @@ export default function Home() {
           return;
         }
         allResults.push(...(data.results ?? []));
+        setAnalyzeProgress(((i + 1) / batches.length) * 100);
       }
       try {
         await saveResults(allResults);
@@ -170,6 +174,7 @@ export default function Home() {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
+      setAnalyzeProgress(0);
     }
   }, [files, router]);
 
@@ -249,14 +254,24 @@ export default function Home() {
         )}
 
         {files.length > 0 && (
-          <button
-            type="button"
-            onClick={goForward}
-            disabled={loading}
-            className="mt-12 w-full rounded-full bg-[#f5f5f7] px-8 py-3.5 text-sm font-medium text-[#0b0b0c] transition-all duration-200 hover:bg-white disabled:opacity-50"
-          >
-            {loading ? "Analyzing…" : "Go cropping"}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={goForward}
+              disabled={loading}
+              className="mt-12 w-full rounded-full bg-[#f5f5f7] px-8 py-3.5 text-sm font-medium text-[#0b0b0c] transition-all duration-200 hover:bg-white disabled:opacity-50"
+            >
+              {loading ? "Analyzing…" : "Go cropping"}
+            </button>
+            {loading && (
+              <div className="mt-4 w-full overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-1.5 rounded-full bg-white/80 transition-[width] duration-300 ease-out"
+                  style={{ width: `${analyzeProgress}%` }}
+                />
+              </div>
+            )}
+          </>
         )}
 
         {error && (

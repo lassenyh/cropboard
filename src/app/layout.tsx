@@ -30,7 +30,7 @@ export default function RootLayout({
         <div className="flex min-h-screen flex-col">
           <div className="flex-1">{children}</div>
           <footer className="py-6 text-center text-[13px] uppercase text-[#a1a1a6]">
-            ©2006 Aparent
+            ©2026 APARENT
           </footer>
         </div>
       </body>

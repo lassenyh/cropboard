@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import JSZip from "jszip";
+import { loadResults } from "@/lib/resultsStorage";
 
 type ProcessedResult = {
   filename: string;
@@ -14,23 +15,16 @@ type ProcessedResult = {
   dataUrl: string;
 };
 
-const STORAGE_KEY = "cropboard-results";
-
 export default function ResultsPage() {
   const [results, setResults] = useState<ProcessedResult[]>([]);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as ProcessedResult[];
-        if (Array.isArray(parsed) && parsed.length > 0) setResults(parsed);
-      }
-    } catch {
-      // ignore
-    }
-    setMounted(true);
+    loadResults()
+      .then((stored) => {
+        if (stored && stored.length > 0) setResults(stored);
+      })
+      .finally(() => setMounted(true));
   }, []);
 
   const download = useCallback((result: ProcessedResult) => {

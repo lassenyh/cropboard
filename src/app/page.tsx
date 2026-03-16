@@ -2,8 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-
-const STORAGE_KEY = "cropboard-results";
+import { saveResults } from "@/lib/resultsStorage";
 
 export default function Home() {
   const router = useRouter();
@@ -158,7 +157,14 @@ export default function Home() {
         }
         allResults.push(...(data.results ?? []));
       }
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(allResults));
+      try {
+        await saveResults(allResults);
+      } catch (storageErr) {
+        setError(
+          "Could not save results (browser storage limit). Try fewer images or a different browser."
+        );
+        return;
+      }
       router.push("/results");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");

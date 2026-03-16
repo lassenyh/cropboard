@@ -108,32 +108,57 @@ export default function Home() {
     if (files.length === 0) return;
     setLoading(true);
     setError(null);
+    const MAX_BATCH_BYTES = 4 * 1024 * 1024; // 4 MB (Vercel limit 4.5 MB)
+    const batches: File[][] = [];
+    let currentBatch: File[] = [];
+    let currentSize = 0;
+    for (const file of files) {
+      if (
+        currentSize + file.size > MAX_BATCH_BYTES &&
+        currentBatch.length > 0
+      ) {
+        batches.push(currentBatch);
+        currentBatch = [];
+        currentSize = 0;
+      }
+      currentBatch.push(file);
+      currentSize += file.size;
+    }
+    if (currentBatch.length > 0) batches.push(currentBatch);
+
+    const allResults: { filename: string; dataUrl: string; mimeType: string; cropWidth: number; cropHeight: number; originalWidth: number; originalHeight: number }[] = [];
     try {
-      const formData = new FormData();
-      files.forEach((f) => formData.append("files", f));
-      const res = await fetch("/api/process-storyboards", {
-        method: "POST",
-        body: formData,
-      });
-      const text = await res.text();
-      let data: { error?: string; detail?: string; results?: unknown[] } = {};
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch {
-        // Server returned non-JSON (e.g. "Request Entity Too Large")
-        const message =
-          res.status === 413 || text.toLowerCase().includes("entity too large")
-            ? "Files too large. Try fewer or smaller images."
-            : res.statusText || "Something went wrong";
-        setError(message);
-        return;
+      for (const batch of batches) {
+        const formData = new FormData();
+        batch.forEach((f) => formData.append("files", f));
+        const res = await fetch("/api/process-storyboards", {
+          method: "POST",
+          body: formData,
+        });
+        const text = await res.text();
+        let data: {
+          error?: string;
+          detail?: string;
+          results?: { filename: string; dataUrl: string; mimeType: string; cropWidth: number; cropHeight: number; originalWidth: number; originalHeight: number }[];
+        } = {};
+        try {
+          data = text ? JSON.parse(text) : {};
+        } catch {
+          const message =
+            res.status === 413 ||
+            text.toLowerCase().includes("entity too large")
+              ? "Files too large. Try fewer or smaller images."
+              : res.statusText || "Something went wrong";
+          setError(message);
+          return;
+        }
+        if (!res.ok) {
+          setError(data.error || data.detail || "Something went wrong");
+          return;
+        }
+        allResults.push(...(data.results ?? []));
       }
-      if (!res.ok) {
-        setError(data.error || data.detail || "Something went wrong");
-        return;
-      }
-      const results = data.results ?? [];
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(results));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(allResults));
       router.push("/results");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");

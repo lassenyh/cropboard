@@ -18,6 +18,9 @@ type ProcessedResult = {
 export default function ResultsPage() {
   const [results, setResults] = useState<ProcessedResult[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [previewResult, setPreviewResult] = useState<ProcessedResult | null>(
+    null
+  );
 
   useEffect(() => {
     loadResults()
@@ -98,9 +101,9 @@ export default function ResultsPage() {
         <div className="mb-12 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <Link href="/" className="flex items-center">
             <img
-              src="/logo/logo4.png"
+              src="/logo/logo5.png"
               alt="Cropboard"
-              className="h-[84px] w-auto object-contain sm:h-24"
+              className="h-[25px] w-auto object-contain sm:h-[29px]"
             />
           </Link>
           <div className="flex gap-3">
@@ -130,12 +133,33 @@ export default function ResultsPage() {
               className="group flex flex-col items-center gap-4"
             >
               <div className="w-full rounded-2xl bg-[#141416] p-6 transition-all duration-200 group-hover:shadow-lg group-hover:shadow-black/20">
-                <div className="flex w-full items-center justify-center overflow-hidden rounded-xl bg-[#0b0b0c]">
+                <div className="relative flex w-full items-center justify-center overflow-hidden rounded-xl bg-[#0b0b0c]">
                   <img
                     src={result.dataUrl}
                     alt={result.filename}
                     className="max-h-[70vh] max-w-full object-contain"
                   />
+
+                  {/* Preview icon - appears on hover; opens centered popup on click */}
+                  <button
+                    type="button"
+                    aria-label="Preview A4 page"
+                    className="absolute right-4 top-4 z-10 rounded-full border border-white/[0.12] bg-white/[0.06] p-2 text-[#f5f5f7] opacity-0 backdrop-blur transition-all duration-200 hover:bg-white/[0.12] group-hover:opacity-100"
+                    onClick={() => setPreviewResult(result)}
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  </button>
                 </div>
               </div>
               <div className="flex w-full flex-col items-center gap-3">
@@ -153,6 +177,51 @@ export default function ResultsPage() {
             </li>
           ))}
         </ul>
+
+        {previewResult && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-6"
+            role="dialog"
+            aria-modal="true"
+            onMouseDown={(e) => {
+              // Close when clicking overlay; keep clicks on popup content open.
+              if (e.target === e.currentTarget) setPreviewResult(null);
+            }}
+          >
+            <div className="relative w-full max-w-4xl rounded-2xl border border-white/[0.12] bg-[#0b0b0c] p-5 shadow-2xl">
+              <button
+                type="button"
+                aria-label="Close preview"
+                onClick={() => setPreviewResult(null)}
+                className="absolute right-3 top-3 rounded-full border border-white/[0.12] bg-white/[0.06] p-2 text-[#f5f5f7] backdrop-blur transition-all duration-200 hover:bg-white/[0.12]"
+              >
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+
+              <div className="flex flex-col items-center gap-3">
+                <p className="text-center text-[13px] text-[#a1a1a6]">
+                  {previewResult.filename}
+                </p>
+                <img
+                  src={previewResult.dataUrl}
+                  alt=""
+                  className="max-h-[90vh] w-auto max-w-full rounded-xl object-contain"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );

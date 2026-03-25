@@ -45,23 +45,40 @@ export async function POST(req: NextRequest) {
     const results = await Promise.all(
       files.map(async (file) => {
         const cropped = await cropStoryboardBorder(file.buffer);
-        const meta = await sharp(file.buffer).metadata();
-        const croppedMeta = await sharp(cropped).metadata();
-        const mimeType =
-          meta.format === "png"
-            ? "image/png"
-            : meta.format === "jpeg" || meta.format === "jpg"
-              ? "image/jpeg"
-              : "image/png";
-        const output =
-          mimeType === "image/png"
-            ? await sharp(cropped).png({ quality: 100 }).toBuffer()
-            : await sharp(cropped).jpeg({ quality: 95 }).toBuffer();
+
+        // Read metadata from original for reference only (dimensions etc.)
+        const originalMeta = await sharp(file.buffer).metadata();
+
+        // Always re-encode from the cropped raster only – this guarantees a
+        // destructively cropped output file with no metadata from the original
+        const croppedImage = sharp(cropped);
+        const croppedMeta = await croppedImage.metadata();
+
+        const format =
+          croppedMeta.format === "png"
+            ? "png"
+            : croppedMeta.format === "jpeg" || croppedMeta.format === "jpg"
+              ? "jpeg"
+              : originalMeta.format === "png"
+                ? "png"
+                : "jpeg";
+
+        const mimeType = format === "png" ? "image/png" : "image/jpeg";
+
+        const pipeline =
+          format === "png"
+            ? croppedImage.png({ quality: 100, force: true })
+            : croppedImage.jpeg({ quality: 95, mozjpeg: true, force: true });
+
+        const output = await pipeline.toBuffer();
+
+        const baseName = file.filename.replace(/\.[^.]+$/, "");
+        const ext = format === "png" ? "png" : "jpg";
 
         return {
-          filename: file.filename,
-          originalWidth: meta.width ?? 0,
-          originalHeight: meta.height ?? 0,
+          filename: `${baseName}_cropped.${ext}`,
+          originalWidth: originalMeta.width ?? 0,
+          originalHeight: originalMeta.height ?? 0,
           cropWidth: croppedMeta.width ?? 0,
           cropHeight: croppedMeta.height ?? 0,
           mimeType,

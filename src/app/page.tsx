@@ -345,7 +345,7 @@ export default function Home() {
                 : "text-[#a1a1a6] hover:text-[#f5f5f7]"
             }`}
           >
-            3×3 A4
+            3×3
           </button>
         </div>
 
@@ -369,7 +369,7 @@ export default function Home() {
             />
             <span className="text-center text-[13px] tracking-wide text-[#a1a1a6]">
               {mode === "3x3"
-                ? "Drop storyboard frames here (3×3 pages; last page can be partial) or click to upload"
+                ? "Drop storyboard frames here (3×3 grid; last grid can be partial) or click to upload"
                 : "Drop storyboard frames here or click to upload"}
             </span>
           </label>
@@ -509,7 +509,7 @@ export default function Home() {
             </button>
             {mode === "3x3" && !loading && (
               <p className="mt-4 text-center text-[13px] text-[#a1a1a6]">
-                Frames are arranged into 3×3 A4 pages (last page can be partial).
+                Frames are arranged into a 3×3 grid (last grid can be partial).
               </p>
             )}
             {loading && (
